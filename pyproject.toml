@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "path2md"
+version = "0.2.2"
+description = "input as code files, output as markdown."
+authors = ["bitnom <14287229+bitnom@users.noreply.github.com>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.11,<=3.12"
+gitignore-parser = "^0.1.11"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
