@@ -3,11 +3,11 @@
 import argparse
 import os
 import re
-import sys
 from gitignore_parser import parse_gitignore
 from pathlib import Path
 
-__version__ = "0.3.2"
+__version__ = "0.3.3"
+
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Wrap file contents in markdown code fences.")
