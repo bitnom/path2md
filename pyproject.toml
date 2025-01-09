@@ -1,6 +1,6 @@
 [project]
 name = "path2md"
-version = "0.3.3"
+version = "0.4.0"
 description = "Input file or dir path, output markdown file(s)."
 authors = [
   { name = "bitnom", email = "14287229+bitnom@users.noreply.github.com" }

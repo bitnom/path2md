@@ -6,7 +6,7 @@ import re
 from gitignore_parser import parse_gitignore
 from pathlib import Path
 
-__version__ = "0.3.3"
+__version__ = "0.4.0"
 
 
 def parse_arguments():
@@ -26,15 +26,17 @@ def parse_arguments():
         help="Output directory for individual markdown files."
     )
 
+    # By default, parse all extensions unless --extensions is specified
     parser.add_argument(
         "--extensions",
         type=lambda s: s.split(','),
-        default=["py", "ts", "js", "mjs", "toml", "json", "tsx", "css", "html"],
+        default=None,
         help=(
             "Comma-separated list of file extensions to process. "
-            "Default: py,ts,js,mjs,toml,json,tsx,css,html"
+            "By default, all file extensions are processed unless this is provided."
         ),
     )
+
     parser.add_argument(
         "--omit",
         type=lambda s: s.split(','),
@@ -120,6 +122,14 @@ def parse_arguments():
         help="Obey .gitignore files found in traversed directories."
     )
 
+    # New option: skip files larger than max-size (default: 100 KB)
+    parser.add_argument(
+        "--max-size",
+        type=int,
+        default=100 * 1024,  # 100 KB
+        help="Maximum file size in bytes to process. Default: 100 KB"
+    )
+
     # Version argument
     parser.add_argument(
         "--version",
@@ -128,6 +138,7 @@ def parse_arguments():
     )
 
     return parser.parse_args()
+
 
 def load_gitignore(directory):
     """
@@ -139,6 +150,21 @@ def load_gitignore(directory):
         return parse_gitignore(gitignore_path)
     return None
 
+
+def is_binary_file(file_path, block_size=1024):
+    """
+    Read the first `block_size` bytes of the file in binary mode.
+    If it contains a null byte, treat as binary.
+    """
+    try:
+        with open(file_path, 'rb') as f:
+            chunk = f.read(block_size)
+        return b'\0' in chunk
+    except Exception:
+        # If we can't read the file, skip it safely
+        return True
+
+
 def list_files(
     directory,
     extensions,
@@ -148,11 +174,13 @@ def list_files(
     whitelist_dirs=None,
     whitelist=None,
     global_gitignore_matcher=None,
-    obey_gitignores=False
+    obey_gitignores=False,
+    max_size=100*1024
 ):
     """
     Traverse the directory tree and return a list of file paths that match
-    the provided extensions, while obeying whitelists, omit lists, and gitignores.
+    the provided conditions, while obeying whitelists, omit lists, file size,
+    binary-file checks, and gitignores.
     """
     if omit_dirs is None:
         omit_dirs = []
@@ -217,9 +245,19 @@ def list_files(
             # Check gitignore
             if current_gitignore and current_gitignore(file_path):
                 continue
+            # Skip if file is too large
+            if os.path.getsize(file_path) > max_size:
+                continue
+            # Skip binary files
+            if is_binary_file(file_path):
+                continue
 
-            # Check extension
-            if os.path.splitext(file)[1][1:] in extensions:
+            # If --extensions was provided, check extension
+            if extensions is not None:
+                if os.path.splitext(file)[1][1:] in extensions:
+                    file_list.append(file_path)
+            else:
+                # By default (extensions=None), parse everything (non-binary, size OK, not ignored)
                 file_list.append(file_path)
 
         # After processing the current directory, pop any local .gitignore we added
@@ -228,6 +266,7 @@ def list_files(
                 gitignore_stack.pop()
 
     return file_list
+
 
 def remove_comments(content, extension):
     """
@@ -241,6 +280,7 @@ def remove_comments(content, extension):
         content = re.sub(r'/\*.*?\*/', '', content, flags=re.DOTALL)
     return content
 
+
 def truncate_strings(content, truncstr):
     string_patterns = [
         r'\'[^\']*\'',
@@ -249,6 +289,7 @@ def truncate_strings(content, truncstr):
         r'\"\"\"(.*?)\"\"\"',
         r'\`[^\`]*\`'
     ]
+
     def truncate_match(match):
         string = match.group(0)
         if len(string) > truncstr:
@@ -262,12 +303,14 @@ def truncate_strings(content, truncstr):
         content = re.sub(pattern, truncate_match, content, flags=re.DOTALL)
     return content
 
+
 def truncate_line(line, truncln):
     if len(line) <= truncln:
         return line
-    if line[truncln-1] in ['\'', '\"', '`']:
+    if line[truncln - 1] in ['\'', '\"', '`']:
         return line[:truncln] + " // (Line truncated to save space)"
     return line[:truncln] + " // (Line truncated to save space)" + line[-1]
+
 
 def limit_consecutive_empty_lines(content, maxlnspace):
     if maxlnspace is None:
@@ -283,6 +326,7 @@ def limit_consecutive_empty_lines(content, maxlnspace):
         if empty_line_count <= maxlnspace:
             new_lines.append(line)
     return "\n".join(new_lines)
+
 
 def read_and_fence(file_path, base_directory, omit_extensions, omit_files, truncln, truncstr, nocom, maxlnspace):
     extension = os.path.splitext(file_path)[1][1:]
@@ -313,6 +357,7 @@ def read_and_fence(file_path, base_directory, omit_extensions, omit_files, trunc
     except Exception as e:
         return f"**{relative_path}** (Error reading file: {e})\n"
 
+
 def concatenate_markdown(files, base_directory, omit_extensions, omit_files, truncln, truncstr, nocom, maxlnspace):
     """
     Read and fence all files in the list, then concatenate into a single string.
@@ -331,11 +376,13 @@ def concatenate_markdown(files, base_directory, omit_extensions, omit_files, tru
         for file in files
     )
 
+
 def sanitize_filename(filename):
     """
     Replaces characters that are invalid on common filesystems.
     """
     return re.sub(r'[<>:"/\\|?*]', '_', str(filename))
+
 
 def write_to_file(content, output_file, output_dir):
     """
@@ -374,6 +421,7 @@ def write_to_file(content, output_file, output_dir):
     else:
         print(content)
 
+
 def main():
     args = parse_arguments()
 
@@ -393,7 +441,8 @@ def main():
         args.whitelist_dirs,
         args.whitelist,
         global_gitignore_matcher,
-        args.obey_gitignores
+        args.obey_gitignores,
+        max_size=args.max_size
     )
 
     markdown_content = concatenate_markdown(
@@ -408,6 +457,7 @@ def main():
     )
 
     write_to_file(markdown_content, args.output_file, args.output_dir)
+
 
 if __name__ == "__main__":
     main()

@@ -9,7 +9,7 @@ sdist = { url = "https://files.pythonhosted.org/packages/19/59/b4fc550b7b07e8951
 
 [[package]]
 name = "path2md"
-version = "0.3.3"
+version = "0.4.0"
 source = { editable = "." }
 dependencies = [
     { name = "gitignore-parser" },

@@ -1,6 +1,6 @@
 # path2md
 
-**Version**: 0.3.3  
+**Version**: 0.4.0  
 **Author**: [bitnom](https://github.com/bitnom)  
 **License**: Apache License 2.0  
 
@@ -20,6 +20,7 @@
   - [Whitelisting Files or Directories](#whitelisting-files-or-directories)
   - [Using Gitignore](#using-gitignore)
   - [Output Options](#output-options)
+  - [File Size Limit and Binary Files](#file-size-limit-and-binary-files)
 - [How It Works](#how-it-works)
 - [Known Limitations and Caveats](#known-limitations-and-caveats)
 - [Contributing](#contributing)
@@ -32,11 +33,14 @@
 `path2md` is a command-line tool designed to collect files from a given directory (and its subdirectories) and wrap each file’s content in Markdown code fences. This lets you quickly generate documentation or share your code snippets in a Markdown-friendly format. You can:
 
 - Restrict which files to include (by file extension, whitelists, or `.gitignore`).  
+- **Parse all file extensions by default** (unless you explicitly provide `--extensions`).  
 - Omit files by extension or filename but still note their presence in the output.  
 - Optionally strip comments to reduce clutter.  
 - Truncate lines and/or strings to limit overly long content.  
 - Limit consecutive empty lines to make the output more compact.  
-- Produce either a single Markdown file or multiple Markdown files (one per source file).  
+- **Skip files larger than a specified maximum size** (`--max-size`, default 100 KB).  
+- **Always skip binary files** automatically.  
+- Produce either a single Markdown file or multiple Markdown files (one per source file).
 
 This tool is especially helpful if you want to share or document multiple files (e.g., sample code, config files) without manually copying and pasting them into code blocks.
 
@@ -99,29 +103,47 @@ positional arguments:
   directory             Directory containing files to process.
 
 optional arguments:
-  --output-file OUTPUT_FILE     Output markdown file path.
-  --output-dir OUTPUT_DIR       Output directory for individual markdown files.
-  --extensions EXTENSIONS       Comma-separated list of file extensions to process.
-                                Default: py,ts,js,mjs,toml,json,tsx,css,html
-  --omit OMIT                   Comma-separated list of file extensions to omit
-                                (source omitted but file is noted).
-  --omit-files OMIT_FILES       Comma-separated list of filenames to omit (source
-                                omitted but file is noted).
-  --omit-dirs OMIT_DIRS         Comma-separated list of directory names to omit
-                                from traversal entirely.
-  --truncln TRUNCLN             Truncate lines longer than this many characters.
-  --truncstr TRUNCSTR           Truncate strings longer than this many characters.
-  --nocom                       Omit all line/block comments from the output.
-  --maxlnspace MAXLNSPACE       Maximum number of consecutive empty lines allowed.
-  --depth DEPTH                 Limit directory recursion depth.
+  --output-file OUTPUT_FILE
+                        Output markdown file path.
+  --output-dir OUTPUT_DIR
+                        Output directory for individual markdown files.
+  --extensions EXTENSIONS
+                        Comma-separated list of file extensions to process.
+                        If not provided, ALL file extensions are processed
+                        (excluding binary files).
+  --omit OMIT
+                        Comma-separated list of file extensions to omit
+                        (source omitted but file is noted).
+  --omit-files OMIT_FILES
+                        Comma-separated list of filenames to omit (source
+                        omitted but file is noted).
+  --omit-dirs OMIT_DIRS
+                        Comma-separated list of directory names to omit
+                        from traversal entirely.
+  --truncln TRUNCLN
+                        Truncate lines longer than this many characters.
+  --truncstr TRUNCSTR
+                        Truncate strings longer than this many characters.
+  --nocom
+                        Omit all line/block comments from the output.
+  --maxlnspace MAXLNSPACE
+                        Maximum number of consecutive empty lines allowed.
+  --depth DEPTH
+                        Limit directory recursion depth.
   --whitelist-files WHITELIST_FILES
-                                Comma-separated list of files to parse.
+                        Comma-separated list of files to parse.
   --whitelist-dirs WHITELIST_DIRS
-                                Comma-separated list of directory names to traverse.
-  --whitelist WHITELIST         Comma-separated list of files/dirs to process.
-  --gitignore GITIGNORE         Path to a .gitignore file (global).
-  --obey-gitignores             Obey .gitignore files found in traversed directories.
-  --version                     Show program's version number and exit.
+                        Comma-separated list of directory names to traverse.
+  --whitelist WHITELIST
+                        Comma-separated list of files/dirs to process.
+  --gitignore GITIGNORE
+                        Path to a .gitignore file (global).
+  --obey-gitignores
+                        Obey .gitignore files found in traversed directories.
+  --max-size MAX_SIZE
+                        Maximum file size in bytes to process (default: 100 KB).
+  --version
+                        Show program's version number and exit.
 ```
 
 ### Basic Example
@@ -130,18 +152,18 @@ optional arguments:
 path2md my_project --output-file project_snippets.md
 ```
 
-- Traverses `my_project/` looking for files with default extensions (`py, ts, js, mjs, toml, json, tsx, css, html`).  
-- Outputs all discovered files into a single Markdown file named `project_snippets.md`.
+- Traverses `my_project/` looking for **all file extensions** by default (skipping binary files and those over 100 KB).  
+- Outputs all discovered (non-binary) files into a single Markdown file named `project_snippets.md`.
 
 ### Specifying File Extensions
 
-To include additional extensions or limit to specific ones:
+To only include certain extensions:
 
 ```bash
 path2md my_project --extensions py,js,json
 ```
 
-This processes only `.py`, `.js`, and `.json` files.
+This processes **only** `.py`, `.js`, and `.json` files (still skipping binary files and those over 100 KB).
 
 ### Omitting Files or Directories
 
@@ -246,6 +268,11 @@ This means each subdirectory’s `.gitignore` rules are also applied.
    path2md my_project
    ```
 
+### File Size Limit and Binary Files
+
+- By default, files larger than **100 KB** are skipped. You can customize this limit with `--max-size <BYTES>`.
+- The script **always skips binary files**. Any file containing a null byte (`\0`) in the first 1024 bytes is treated as binary, and it won’t be included in the output.
+
 ---
 
 ## How It Works
@@ -255,8 +282,9 @@ This means each subdirectory’s `.gitignore` rules are also applied.
 
 2. **File Collection**  
    - Uses `os.walk()` to scan the specified directory.  
-   - Checks optional recursion depth, directory whitelists/omits, and `.gitignore` rules to filter out unwanted paths.  
-   - Collects only the files that match the specified file extensions (if any).
+   - Checks optional recursion depth, directory whitelists/omits, `.gitignore` rules, and maximum file size to filter out unwanted paths.  
+   - Automatically **skips binary files**.  
+   - By default, if `--extensions` is **not** provided, **all** non-binary files under the `max-size` limit are processed.
 
 3. **Fencing Content**  
    For each file that passes the filters:
