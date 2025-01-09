@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "path2md"
-version = "0.2.2"
-description = "input as code files, output as markdown."
+version = "0.3.2"
+description = "Input file or dir path, output markdown file(s)."
 authors = ["bitnom <14287229+bitnom@users.noreply.github.com>"]
 license = "MIT"
 readme = "README.md"
