@@ -1,7 +1,7 @@
 # path2md
 
 **Version**: 0.3.3
-**Author**: [ZenSin](https://github.com/zensin)  
+**Author**: [bitnom](https://github.com/bitnom)  
 **License**: Apache License 2.0
 
 ## Table of Contents
