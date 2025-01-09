@@ -43,7 +43,9 @@
 - **Always skip binary files** automatically.  
 - Produce either a single Markdown file or multiple Markdown files (one per source file).
 
-This tool is especially helpful if you want to share or document multiple files (e.g., sample code, config files) without manually copying and pasting them into code blocks.
+This tool is especially helpful if you want to share or document multiple files (e.g., sample code, config files) with an LLM (Large Language Model) without manually copying and pasting them into code blocks.
+
+[See output demo in example.md](example.md)
 
 ---
 
