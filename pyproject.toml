@@ -1,9 +1,9 @@
 [tool.poetry]
 name = "path2md"
-version = "0.3.2"
+version = "0.3.3"
 description = "Input file or dir path, output markdown file(s)."
 authors = ["bitnom <14287229+bitnom@users.noreply.github.com>"]
-license = "MIT"
+license = "Apache-2.0"
 readme = "README.md"
 
 [tool.poetry.dependencies]
