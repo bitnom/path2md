@@ -267,7 +267,7 @@ If these caveats don’t affect your typical use, the script should work fine.
 
 ## Contributing
 
-Contributions, bug reports, and feature requests are welcome. Please open an issue or submit a pull request on the [GitHub repository](https://github.com/zensin/path2md) (or wherever the project is hosted).
+Contributions, bug reports, and feature requests are welcome. Please open an issue or submit a pull request on the [GitHub repository](https://github.com/bitnom/path2md) (or wherever the project is hosted).
 
 When submitting code changes, please ensure you:
 
