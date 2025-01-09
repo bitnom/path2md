@@ -1,13 +1,15 @@
 # path2md
 
-**Version**: 0.3.3
+**Version**: 0.3.3  
 **Author**: [bitnom](https://github.com/bitnom)  
-**License**: Apache License 2.0
+**License**: Apache License 2.0  
 
 ## Table of Contents
 
 - [Overview](#overview)
 - [Installation](#installation)
+  - [Install via Poetry (Recommended)](#install-via-poetry-recommended)
+  - [Install via pip](#install-via-pip)
 - [Usage](#usage)
   - [Basic Example](#basic-example)
   - [Specifying File Extensions](#specifying-file-extensions)
@@ -27,7 +29,7 @@
 
 ## Overview
 
-`path2md.py` is a command-line tool designed to collect files from a given directory (and its subdirectories) and wrap each file’s content in Markdown code fences. This lets you quickly generate documentation or share your code snippets in a Markdown-friendly format. You can:
+`path2md` is a command-line tool designed to collect files from a given directory (and its subdirectories) and wrap each file’s content in Markdown code fences. This lets you quickly generate documentation or share your code snippets in a Markdown-friendly format. You can:
 
 - Restrict which files to include (by file extension, whitelists, or `.gitignore`).  
 - Omit files by extension or filename but still note their presence in the output.  
@@ -42,30 +44,52 @@ This tool is especially helpful if you want to share or document multiple files 
 
 ## Installation
 
-1. **Clone or Download** this repository (or copy `path2md.py` into your project).
-2. **Install Dependencies**:
+### Install via Poetry (Recommended)
+
+1. **Clone** or **download** this repository.
+2. In the project directory (where your `pyproject.toml` is located), run:
 
    ```bash
-   pip install gitignore_parser
+   poetry install
    ```
 
-   The `gitignore_parser` library is required to handle `.gitignore` patterns.  
-3. **Make `path2md.py` Executable (optional)**:
+3. Poetry will install all dependencies and create a virtual environment. Once installed, you can either:
+   - Use it directly via:
+     ```bash
+     poetry run path2md --help
+     ```
+   - Or activate the virtual environment (`poetry shell`) and then run:
+     ```bash
+     path2md --help
+     ```
 
-   On Linux/macOS:
+### Install via pip
+
+1. **Clone** or **download** this repository.
+2. From the top-level directory (with the `pyproject.toml`), run:
    ```bash
-   chmod +x path2md.py
+   pip install .
    ```
-   Then you can run `./path2md.py ...` or `python path2md.py ...`.
+   This will build and install the package into your current Python environment.
+3. Once installed, you can run:
+   ```bash
+   path2md --help
+   ```
+
+> **Note:** If you want to install in “editable”/dev mode, use:
+> ```bash
+> pip install -e .
+> ```
+> Then any local changes to the code reflect immediately.
 
 ---
 
 ## Usage
 
-Run the script with Python 3. For example:
+After installation (Poetry or pip), you’ll have a `path2md` CLI command in your PATH. Run:
 
 ```bash
-python path2md.py <directory> [options]
+path2md <directory> [options]
 ```
 
 Below is a summary of all the available options:
@@ -103,7 +127,7 @@ optional arguments:
 ### Basic Example
 
 ```bash
-python path2md.py my_project --output-file project_snippets.md
+path2md my_project --output-file project_snippets.md
 ```
 
 - Traverses `my_project/` looking for files with default extensions (`py, ts, js, mjs, toml, json, tsx, css, html`).  
@@ -114,7 +138,7 @@ python path2md.py my_project --output-file project_snippets.md
 To include additional extensions or limit to specific ones:
 
 ```bash
-python path2md.py my_project --extensions py,js,json
+path2md my_project --extensions py,js,json
 ```
 
 This processes only `.py`, `.js`, and `.json` files.
@@ -125,13 +149,13 @@ You can omit files by extension or by exact filename:
 
 ```bash
 # Omit .env and .lock files, but still note them in the output
-python path2md.py my_project --omit env,lock
+path2md my_project --omit env,lock
 ```
 
 To **completely skip** a directory, use `--omit-dirs`:
 
 ```bash
-python path2md.py my_project --omit-dirs node_modules,build
+path2md my_project --omit-dirs node_modules,build
 ```
 
 Any directory named `node_modules` or `build` will not be entered during traversal.
@@ -144,7 +168,7 @@ Any directory named `node_modules` or `build` will not be entered during travers
 Example:
 
 ```bash
-python path2md.py my_project --truncln 120 --truncstr 200
+path2md my_project --truncln 120 --truncstr 200
 ```
 
 Lines over 120 characters will be shortened, and string literals over 200 characters will be truncated.
@@ -154,7 +178,7 @@ Lines over 120 characters will be shortened, and string literals over 200 charac
 Use `--nocom` to strip out comments:
 
 ```bash
-python path2md.py my_project --nocom
+path2md my_project --nocom
 ```
 
 Currently, this removes:
@@ -168,7 +192,7 @@ It is a naive removal (simple regex-based) and won’t handle advanced edge case
 If you only want to scan subdirectories up to a certain depth from the initial directory:
 
 ```bash
-python path2md.py my_project --depth 2
+path2md my_project --depth 2
 ```
 
 - `depth=0` means only the directory itself.  
@@ -179,7 +203,7 @@ python path2md.py my_project --depth 2
 If you only want to process specific files or directories:
 
 ```bash
-python path2md.py my_project --whitelist-files main.py,settings.py
+path2md my_project --whitelist-files main.py,settings.py
 ```
 
 This will only process `main.py` and `settings.py` (within the given directory). Similarly, `--whitelist-dirs` only traverses directories whose names match the whitelist. The more general `--whitelist` applies to both file and directory names.
@@ -189,13 +213,13 @@ This will only process `main.py` and `settings.py` (within the given directory).
 You can specify a global `.gitignore` to skip certain files:
 
 ```bash
-python path2md.py my_project --gitignore /path/to/.gitignore
+path2md my_project --gitignore /path/to/.gitignore
 ```
 
 Or, if you want the script to obey any `.gitignore` found inside subdirectories:
 
 ```bash
-python path2md.py my_project --obey-gitignores
+path2md my_project --obey-gitignores
 ```
 
 This means each subdirectory’s `.gitignore` rules are also applied.
@@ -205,13 +229,13 @@ This means each subdirectory’s `.gitignore` rules are also applied.
 1. **Output to a single Markdown file**:
 
    ```bash
-   python path2md.py my_project --output-file output.md
+   path2md my_project --output-file output.md
    ```
 
 2. **Output to multiple Markdown files (one per source file)**:
 
    ```bash
-   python path2md.py my_project --output-dir output_folder
+   path2md my_project --output-dir output_folder
    ```
 
    This creates `output_folder/` if it doesn’t exist, then places individual `.md` files for each source file. The filenames are based on the relative paths of the source files but sanitized for filesystem safety.
@@ -219,7 +243,7 @@ This means each subdirectory’s `.gitignore` rules are also applied.
 3. **Output to STDOUT** (default if neither `--output-file` nor `--output-dir` is specified):
 
    ```bash
-   python path2md.py my_project
+   path2md my_project
    ```
 
 ---
