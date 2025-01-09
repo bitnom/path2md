@@ -8,8 +8,9 @@
 
 - [Overview](#overview)
 - [Installation](#installation)
-  - [Install via Poetry (Recommended)](#install-via-poetry-recommended)
+  - [Install via uv (Recommended)](#install-via-uv-recommended)
   - [Install via pip](#install-via-pip)
+  - [Install via Poetry](#install-via-poetry)
 - [Usage](#usage)
   - [Basic Example](#basic-example)
   - [Specifying File Extensions](#specifying-file-extensions)
@@ -48,34 +49,49 @@ This tool is especially helpful if you want to share or document multiple files 
 
 ## Installation
 
-### Install via Poetry (Recommended)
+### Install via uv (Recommended)
+
+If you haven’t used **uv** before, it’s a lightweight Python project management tool that helps isolate dependencies. You can install **uv** system-wide with:
+
+```bash
+pip install uv
+```
+
+Then follow these steps:
 
 1. **Clone** or **download** this repository.
 2. In the project directory (where your `pyproject.toml` is located), run:
 
    ```bash
-   poetry install
+   uv install
    ```
 
-3. Poetry will install all dependencies and create a virtual environment. Once installed, you can either:
-   - Use it directly via:
-     ```bash
-     poetry run path2md --help
-     ```
-   - Or activate the virtual environment (`poetry shell`) and then run:
-     ```bash
-     path2md --help
-     ```
+3. Once installed, you can run:
+
+   ```bash
+   uv run path2md --help
+   ```
+
+   Or simply:
+
+   ```bash
+   uv path2md --help
+   ```
+
+   depending on your uv version/configuration.
 
 ### Install via pip
 
 1. **Clone** or **download** this repository.
 2. From the top-level directory (with the `pyproject.toml`), run:
+
    ```bash
    pip install .
    ```
+
    This will build and install the package into your current Python environment.
 3. Once installed, you can run:
+
    ```bash
    path2md --help
    ```
@@ -86,11 +102,30 @@ This tool is especially helpful if you want to share or document multiple files 
 > ```
 > Then any local changes to the code reflect immediately.
 
+### Install via Poetry
+
+1. **Clone** or **download** this repository.
+2. In the project directory, run:
+
+   ```bash
+   poetry install
+   ```
+
+3. Once installed, you can:
+   - Use it directly via:
+     ```bash
+     poetry run path2md --help
+     ```
+   - Or activate the virtual environment (`poetry shell`) and then run:
+     ```bash
+     path2md --help
+     ```
+
 ---
 
 ## Usage
 
-After installation (Poetry or pip), you’ll have a `path2md` CLI command in your PATH. Run:
+After installation (via uv, pip, or Poetry), you’ll have a `path2md` CLI command in your PATH. Run:
 
 ```bash
 path2md <directory> [options]
@@ -302,16 +337,16 @@ This means each subdirectory’s `.gitignore` rules are also applied.
 
 1. **Naive Regex for Comments and Strings**  
    - The regex approach may remove content that merely *resembles* a comment (e.g., `//` in a string).  
-   - Similarly, string truncation might behave unexpectedly with nested quotes or escaped characters.  
+   - Similarly, string truncation might behave unexpectedly with nested quotes or escaped characters.
 
 2. **Splitting Output in `--output-dir` Mode**  
    - The script splits combined content on `\n**`, which might conflict if your files legitimately contain that exact sequence in code. This is unlikely but worth noting.  
 
 3. **Overwriting Files**  
-   - If two different source files sanitize to the same name, the second will overwrite the first in the output directory. (For example, `foo/bar.py` and `foo:bar.py` both becoming `foo_bar_py.md`.)  
+   - If two different source files sanitize to the same name, the second will overwrite the first in the output directory. (For example, `foo/bar.py` and `foo:bar.py` both becoming `foo_bar_py.md`.)
 
 4. **Case Sensitivity**  
-   - On some filesystems (e.g., Windows), filename case might cause collisions in `--output-dir` mode.  
+   - On some filesystems (e.g., Windows), filename case might cause collisions in `--output-dir` mode.
 
 If these caveats don’t affect your typical use, the script should work fine.
 
