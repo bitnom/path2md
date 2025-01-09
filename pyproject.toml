@@ -1,3 +1,24 @@
+[project]
+name = "path2md"
+version = "0.3.3"
+description = "Input file or dir path, output markdown file(s)."
+authors = [
+  { name = "bitnom", email = "14287229+bitnom@users.noreply.github.com" }
+]
+license = "Apache-2.0"
+readme = "README.md"
+requires-python = ">=3.11,<=3.12"
+dependencies = [
+    "gitignore-parser>=0.1.11",
+]
+
+[project.scripts]
+path2md = "path2md.cli:main"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
 [tool.poetry]
 name = "path2md"
 version = "0.3.3"
@@ -9,11 +30,6 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = ">=3.11,<=3.12"
 gitignore-parser = "^0.1.11"
-
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 path2md = "path2md.cli:main"
