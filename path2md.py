@@ -1,19 +1,20 @@
-# path2md.py
-
 import argparse
-import os
 import re
 import sys
+from pathlib import Path
 from gitignore_parser import parse_gitignore
+import os
 
-__version__ = "0.2.2"
+__version__ = "0.3.1"
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Wrap file contents in markdown code fences.")
     input_group = parser.add_mutually_exclusive_group(required=True)
     input_group.add_argument("--input-directory", type=str, help="Directory containing files to process.")
     input_group.add_argument("--input-paths-file", type=str, help="Path to a file containing a list of paths to process.")
-    parser.add_argument("--output-file", type=str, help="Output markdown file path. If not provided, output will be printed to console.")
+    output_group = parser.add_mutually_exclusive_group()
+    output_group.add_argument("--output-file", type=str, help="Output markdown file path. If not provided, output will be printed to console.")
+    output_group.add_argument("--output-dir", type=str, help="Output directory for individual markdown files.")
     parser.add_argument("--extensions", type=lambda s: s.split(','), default="py,ts,js,mjs,toml,json,tsx,css,html",
                         help="Comma-separated list of file extensions to process. Default: py,ts,js,mjs,toml,json,tsx,css,html")
     parser.add_argument("--omit", type=lambda s: s.split(','), default="",
@@ -46,18 +47,18 @@ def parse_arguments():
     return parser.parse_args()
 
 def load_gitignore(directory):
-    gitignore_path = os.path.join(directory, '.gitignore')
-    if os.path.exists(gitignore_path):
-        return parse_gitignore(gitignore_path)
+    gitignore_path = directory / '.gitignore'
+    if gitignore_path.exists():
+        return parse_gitignore(str(gitignore_path))
     return None
 
 def list_files(directory, extensions, max_depth=None, omit_dirs=[], whitelist_files=None, whitelist_dirs=None, whitelist=None, global_gitignore_matcher=None, obey_gitignores=False):
     file_list = []
-    start_depth = directory.count(os.sep)
+    start_depth = len(directory.parts)
     gitignore_stack = [global_gitignore_matcher] if global_gitignore_matcher else []
 
-    for root, dirs, files in os.walk(directory):
-        current_depth = root.count(os.sep) - start_depth
+    for root, dirs, files in directory.walk():
+        current_depth = len(root.parts) - start_depth
         if max_depth is not None and current_depth >= max_depth:
             dirs[:] = []
             continue
@@ -67,8 +68,8 @@ def list_files(directory, extensions, max_depth=None, omit_dirs=[], whitelist_fi
             if local_gitignore:
                 gitignore_stack.append(local_gitignore)
             elif gitignore_stack:
-                parent_dir = os.path.dirname(root)
-                if os.path.exists(os.path.join(parent_dir, '.gitignore')):
+                parent_dir = root.parent
+                if (parent_dir / '.gitignore').exists():
                     gitignore_stack.pop()
 
         current_gitignore = gitignore_stack[-1] if gitignore_stack else None
@@ -81,21 +82,21 @@ def list_files(directory, extensions, max_depth=None, omit_dirs=[], whitelist_fi
             dirs[:] = [d for d in dirs if d not in omit_dirs]
 
         if current_gitignore:
-            dirs[:] = [d for d in dirs if not current_gitignore(os.path.join(root, d))]
+            dirs[:] = [d for d in dirs if not current_gitignore(str(root / d))]
 
         for file in files:
-            file_path = os.path.join(root, file)
-            relative_path = os.path.relpath(file_path, directory)
+            file_path = root / file
+            relative_path = file_path.relative_to(directory)
 
             if whitelist_files and file not in whitelist_files:
                 continue
-            if whitelist and relative_path not in whitelist and file not in whitelist:
+            if whitelist and str(relative_path) not in whitelist and file not in whitelist:
                 continue
 
-            if current_gitignore and current_gitignore(file_path):
+            if current_gitignore and current_gitignore(str(file_path)):
                 continue
 
-            if os.path.splitext(file)[1][1:] in extensions:
+            if file_path.suffix[1:] in extensions:
                 file_list.append(file_path)
 
     return file_list
@@ -152,14 +153,13 @@ def limit_consecutive_empty_lines(content, maxlnspace):
     return "\n".join(new_lines)
 
 def read_and_fence(file_path, base_directory, omit_extensions, omit_files, truncln, truncstr, nocom, maxlnspace):
-    extension = os.path.splitext(file_path)[1][1:]
-    relative_path = os.path.relpath(file_path, base_directory)
-    filename = os.path.basename(file_path)
+    extension = file_path.suffix[1:]
+    relative_path = file_path.relative_to(base_directory)
+    filename = file_path.name
     if extension in omit_extensions or filename in omit_files:
         return f"**{relative_path}** (Source omitted to save space)\n"
     try:
-        with open(file_path, 'r') as file:
-            content = file.read()
+        content = file_path.read_text(encoding='utf-8')
         if nocom:
             content = remove_comments(content, extension)
         if truncstr:
@@ -175,16 +175,28 @@ def read_and_fence(file_path, base_directory, omit_extensions, omit_files, trunc
 def concatenate_markdown(files, base_directory, omit_extensions, omit_files, truncln, truncstr, nocom, maxlnspace):
     return "\n".join(read_and_fence(file, base_directory, omit_extensions, omit_files, truncln, truncstr, nocom, maxlnspace) for file in files)
 
-def write_to_file(content, output_file):
-    if output_file:
-        with open(output_file, 'w') as file:
-            file.write(content)
+def sanitize_filename(filename):
+    return re.sub(r'[<>:"/\\|?*]', '_', str(filename))
+
+def write_to_file(content, output_file, output_dir, base_directory):
+    if output_dir:
+        output_dir = Path(output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        for file_content in content.split('\n**'):
+            if file_content.strip():
+                file_path, file_content = file_content.split('**\n', 1)
+                file_path = file_path.strip()
+                sanitized_path = sanitize_filename(file_path)
+                output_path = output_dir / f"{sanitized_path}.md"
+                output_path.parent.mkdir(parents=True, exist_ok=True)
+                output_path.write_text(f"**{file_path}**\n{file_content}", encoding='utf-8')
+    elif output_file:
+        Path(output_file).write_text(content, encoding='utf-8')
     else:
         print(content)
 
 def read_input_paths(input_paths_file):
-    with open(input_paths_file, 'r') as f:
-        return [line.strip() for line in f if line.strip()]
+    return Path(input_paths_file).read_text(encoding='utf-8').splitlines()
 
 def main():
     args = parse_arguments()
@@ -194,7 +206,7 @@ def main():
         global_gitignore_matcher = parse_gitignore(args.gitignore)
 
     if args.input_directory:
-        abs_directory = os.path.abspath(args.input_directory)
+        abs_directory = Path(args.input_directory).resolve()
         files = list_files(abs_directory, args.extensions, args.depth, args.omit_dirs,
                            args.whitelist_files, args.whitelist_dirs, args.whitelist,
                            global_gitignore_matcher, args.obey_gitignores)
@@ -202,18 +214,18 @@ def main():
         input_paths = read_input_paths(args.input_paths_file)
         files = []
         for path in input_paths:
-            abs_path = os.path.abspath(path)
-            if os.path.isdir(abs_path):
+            abs_path = Path(path).resolve()
+            if abs_path.is_dir():
                 files.extend(list_files(abs_path, args.extensions, args.depth, args.omit_dirs,
                                         args.whitelist_files, args.whitelist_dirs, args.whitelist,
                                         global_gitignore_matcher, args.obey_gitignores))
-            elif os.path.isfile(abs_path):
+            elif abs_path.is_file():
                 files.append(abs_path)
 
-    base_directory = os.path.commonpath(files) if files else ""
+    base_directory = Path(os.path.commonpath([str(f) for f in files])) if files else Path()
     markdown_content = concatenate_markdown(files, base_directory, args.omit, args.omit_files,
                                             args.truncln, args.truncstr, args.nocom, args.maxlnspace)
-    write_to_file(markdown_content, args.output_file)
+    write_to_file(markdown_content, args.output_file, args.output_dir, base_directory)
 
 if __name__ == "__main__":
     main()
